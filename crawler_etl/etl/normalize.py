@@ -409,15 +409,8 @@ PUBLISHER_MAPPING = {
         "Nhà Xuất Bản Từ Điển Bách Khoa",
         
     # Báo / công ty Việt Nam
-    #"bao tuoi tre": "Báo Tuổi Trẻ",
-    #"bao sinh vien viet nam hoa hoc tro": "Báo Sinh Viên Việt Nam - Hoa Học Trò",
     "bao sinh vien vn hoa hoc tro": "Báo Sinh Viên Việt Nam - Hoa Học Trò",
     "cong ty tnhh khong gian song media": "Công Ty TNHH Không Gian Sống Media",
-    #"cong ty tnhh van hoa viet thu": "Công Ty TNHH Văn Hóa Việt Thư",
-    #"phuong nam book": "Phương Nam Book",
-    #"vanlangbooks": "VanLangBooks",
-    #"saigon times group": "Saigon Times Group",
-    #"tap chi kinh te sai gon": "Tạp Chí Kinh Tế Sài Gòn",
 
     # Nhà Xuất Bản Y Học
     "nha xuat ban y hoc":
@@ -454,7 +447,6 @@ PUBLISHER_MAPPING = {
     "su pham tp hcm": "Nhà Xuất Bản Đại Học Sư Phạm TP.HCM",
     
     "nxb lao dong ha noi": "Nhà Xuất Bản Lao Động Hà Nội",
-    #"nxb ton giao": "Nhà Xuất Bản Tôn Giáo",
     "nxb dh quoc gia tp hcm": "Nhà Xuất Bản Đại Học Quốc Gia TP.HCM",
     
     "public affairs": "PublicAffairs",
@@ -470,7 +462,6 @@ PUBLISHER_MAPPING = {
     
     "picador paper": "Picador",
     "scholastic focus": "Scholastic",
-    #"sourcebooks inc": "Sourcebooks",
     "workman kids": "Workman Publishing",
     "headline eternal": "Headline Publishing Group",
     "headline home": "Headline Publishing Group",
@@ -615,14 +606,23 @@ PUBLISHER_MAPPING = {
     # Nhà Xuất Bản Thuận Hóa
     "thuan hoa": "Nhà Xuất Bản Thuận Hóa",
     
+        # Việt Nam
+    "nxb tri thuc": "Nhà Xuất Bản Tri Thức",
+    "nxb chinh tri quoc gia su that": "Nhà Xuất Bản Chính Trị Quốc Gia Sự Thật",
+    "nxb the duc the thao": "Nhà Xuất Bản Thể Dục Thể Thao",
+    "tan viet": "Tân Việt Books",
+    "nha xuat ban kinh te tphcm": "Nhà Xuất Bản Kinh Tế TP.HCM",
+    "nha xuat ban tong hop": "Nhà Xuất Bản Tổng Hợp",
+    "nxb tong hop": "Nhà Xuất Bản Tổng Hợp",
+    "tong hop": "Nhà Xuất Bản Tổng Hợp",
+    "nbx dai hoc quoc gia ha noi": "Nhà Xuất Bản Đại Học Quốc Gia Hà Nội",
+    
     # English publisher variants
-    #"penguin": "Penguin Books",
     "simon schuster ltd": "Simon & Schuster",
     "bloomsbury publishing inc": "Bloomsbury",
     "nxb cambridge university": "Cambridge University Press",
     "macmillan publishers": "Macmillan",
     "macmillan publishers ltd": "Macmillan",
-    #"dk publishing": "DK Publishing",
     "d k publishing": "DK Publishing",
     
     "grand central": "Grand Central Publishing",
@@ -659,18 +659,13 @@ PUBLISHER_MAPPING = {
     "images publishing group": "Images Publishing",
     "little tiger press group": "Little Tiger Press",
     "transworld publishers ltd": "Transworld Publishers",
-    
-    # English publishers
-    #"penguin": "Penguin Books",
     "hachette intl": "Hachette",
     "hachette usa": "Hachette",
     "hachette book group usa": "Hachette",
     "thames hudson ltd": "Thames & Hudson",
     "vintage books": "Vintage",
     "vintage publishing": "Vintage",
-    #"little brown": "Little, Brown",
     "little brown books": "Little, Brown Books",
-    #"little brown book group": "Little, Brown Book Group",
     "little brown and company": "Little, Brown & Company",
     "little brown company": "Little, Brown & Company",
     "kodansha international": "Kodansha",
@@ -680,17 +675,13 @@ PUBLISHER_MAPPING = {
     "ryland peters small ltd": "Ryland, Peters & Small",
     "crown publishing group": "Crown",
     "orion publishing co": "Orion Publishing",
-    #"st martins publishing group": "St. Martin's Press",
     "arrow books ltd": "Arrow Books",
     "bonnier books ltd": "Bonnier Books",
     "random house business books": "Random House Business",
     "penguin young readers group": "Penguin Young Readers",
     "disney hyperion": "Disney Hyperion",
-    #"disney publishing group": "Disney Publishing",
-    
     "north parade publishing ltd": "North Parade Publishing",
     "andrews mcmeel publishing": "Andrews McMeel Publishing",
-    #"andrews mcmeel": "Andrews McMeel Publishing",
     "chicken soup for the soul": "Chicken Soup for the Soul",
     "harperteen": "HarperTeen",
     "disney publishing group": "Disney Press",
@@ -705,9 +696,7 @@ PUBLISHER_MAPPING = {
     "hachette go": "Hachette",
     "hachette us": "Hachette",
     "hachette uk distribution": "Hachette",
-    #"hachette childrens group": "Hachette",
     "bloomsbury uk": "Bloomsbury",
-    #"bloomsbury childrens books": "Bloomsbury",
     "bloomsbury children": "Bloomsbury",
     "bloomsbury paperbacks": "Bloomsbury",
     "bloomsbury continuum": "Bloomsbury",
@@ -721,8 +710,6 @@ PUBLISHER_MAPPING = {
     "random house trade paperbacks": "Random House",
     "random house childrens books": "Random House",
     "random house books for young readers": "Random House",
-    
-    # Một số publisher Anh/Mỹ khác
     "cengage": "Cengage Learning",
     "cengage learning custom publishing": "Cengage Learning",
     "pearson education": "Pearson",
@@ -732,31 +719,9 @@ PUBLISHER_MAPPING = {
     "portfolio penguin": "Portfolio",
     "hinkler pty ltd": "Hinkler Books",
     "hodder stoughton general division": "Hodder & Stoughton",
-    
-    # Exact/case/hậu tố còn sót
-    #"north parade publishing ltd": "North Parade Publishing",
-    #"chicken soup for the soul": "Chicken Soup for the Soul",
-    #"disney hyperion": "Disney Hyperion",
-    #"harperteen": "HarperTeen",
-    #"kodansha international": "Kodansha",
     "kodansha comics": "Kodansha",
     "taschen america llc": "Taschen",
-    # Việt Nam
-    "nxb tri thuc": "Nhà Xuất Bản Tri Thức",
-    #"nxb thanh hoa": "Nhà Xuất Bản Thanh Hóa",
-    #"nha xuat ban thanh hoa": "Nhà Xuất Bản Thanh Hóa",
-    "nxb chinh tri quoc gia su that": "Nhà Xuất Bản Chính Trị Quốc Gia Sự Thật",
-    "nxb the duc the thao": "Nhà Xuất Bản Thể Dục Thể Thao",
-    "tan viet": "Tân Việt Books",
-    "nha xuat ban kinh te tphcm": "Nhà Xuất Bản Kinh Tế TP.HCM",
-    "nha xuat ban tong hop": "Nhà Xuất Bản Tổng Hợp",
-    "nxb tong hop": "Nhà Xuất Bản Tổng Hợp",
-    "tong hop": "Nhà Xuất Bản Tổng Hợp",
-    "nbx dai hoc quoc gia ha noi": "Nhà Xuất Bản Đại Học Quốc Gia Hà Nội",
-    
-    #"pocket classics 2005 04 26": "Pocket Classics",
     "thames hudson ltd 2001 02": "Thames & Hudson",
-    #"j p tarcher u s perigee bks u s": "J.P. Tarcher/Perigee",
     "s s simon element": "Simon Element",
     "periplus editions berkeley books pte ltd": "Periplus Editions",
 }
