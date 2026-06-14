@@ -6,6 +6,7 @@ import argparse
 import csv
 import json
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -51,15 +52,43 @@ def write_csv(path: Path, records: list[dict[str, Any]]) -> None:
         writer.writerows(records)
 
 
+def remove_accents(text: str) -> str:
+    text = unicodedata.normalize("NFD", text)
+    text = "".join(
+        ch for ch in text
+        if unicodedata.category(ch) != "Mn"
+    )
+    return text.replace("đ", "d").replace("Đ", "D")
+
 def normalize_key(value: Any) -> str:
-    text = "" if value is None else str(value).lower()
+    text = "" if value is None else str(value)
+
+    text = remove_accents(text)
+    text = text.lower()
+
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"[^\w\s]", "", text)
+
     return text.strip()
 
 
+def normalize_author_tokens(value: Any) -> set[str]:
+    text = normalize_key(value)
+    if not text:
+        return set()
+    parts = re.split(r"[,&;/]|\band\b|\bva\b|\bvà\b|\bwith\b|\+", text)
+    tokens: set[str] = set()
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        tokens.update(re.findall(r"[a-z0-9]{3,}", part))
+    return tokens
+
+
 def enrich_publish_year_from_fahasa(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    fahasa_index: dict[tuple[str, str], int] = {}
+    fahasa_index_by_title: dict[str, list[tuple[set[str], int]]] = {}
+    fahasa_title_year: dict[str, int | None] = {}
 
     for record in records:
         if record.get("source") != "fahasa":
@@ -69,13 +98,17 @@ def enrich_publish_year_from_fahasa(records: list[dict[str, Any]]) -> list[dict[
         if publish_year is None:
             continue
 
-        key = (
-            normalize_key(record.get("title")),
-            normalize_key(record.get("author")),
-        )
+        title_key = normalize_key(record.get("title"))
+        if not title_key:
+            continue
 
-        if key[0] and key[1]:
-            fahasa_index[key] = publish_year
+        author_tokens = normalize_author_tokens(record.get("author"))
+        fahasa_index_by_title.setdefault(title_key, []).append((author_tokens, publish_year))
+
+        if title_key not in fahasa_title_year:
+            fahasa_title_year[title_key] = publish_year
+        elif fahasa_title_year[title_key] != publish_year:
+            fahasa_title_year[title_key] = None
 
     for record in records:
         if record.get("source") != "tiki":
@@ -84,13 +117,33 @@ def enrich_publish_year_from_fahasa(records: list[dict[str, Any]]) -> list[dict[
         if record.get("publish_year") is not None:
             continue
 
-        key = (
-            normalize_key(record.get("title")),
-            normalize_key(record.get("author")),
-        )
+        title_key = normalize_key(record.get("title"))
+        if not title_key:
+            continue
 
-        if key in fahasa_index:
-            record["publish_year"] = fahasa_index[key]
+        candidates = fahasa_index_by_title.get(title_key)
+        if not candidates:
+            continue
+
+        author_tokens = normalize_author_tokens(record.get("author"))
+        matched_year = None
+
+        if author_tokens:
+            for tokens, year in candidates:
+                if tokens and tokens & author_tokens:
+                    matched_year = year
+                    break
+
+        if matched_year is None:
+            if len(candidates) == 1:
+                matched_year = candidates[0][1]
+            else:
+                title_year = fahasa_title_year.get(title_key)
+                if title_year is not None:
+                    matched_year = title_year
+
+        if matched_year is not None:
+            record["publish_year"] = matched_year
 
     return records
 
@@ -105,6 +158,7 @@ def main() -> None:
 
     raw_records = read_records(args.inputs or DEFAULT_INPUTS)
     normalized = [normalize_record(record) for record in raw_records]
+    normalized = [record for record in normalized if record is not None]
     normalized = enrich_publish_year_from_fahasa(normalized)
     validated, rejected = partition_records(normalized)
     valid = deduplicate(validated)

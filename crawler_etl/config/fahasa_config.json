@@ -4,7 +4,7 @@
   "max_pages_per_category": 3,
   "max_products_per_category": 50,
   "discover_categories": true,
-  "max_discovered_categories": 120,
+  "max_discovered_categories": 160,
   "max_categories_per_seed": 60,
   "max_category_depth": 2,
   "category_seed_urls": [

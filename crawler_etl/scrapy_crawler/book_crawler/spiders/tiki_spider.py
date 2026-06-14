@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib import response
+from urllib import response
 from urllib.parse import urlencode, urljoin
 
+from importlib_metadata import metadata
 import scrapy
+from scrapy import item
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 if str(PROJECT_ROOT) not in sys.path:
@@ -52,6 +58,29 @@ def first_text(*values: Any) -> str | None:
     return None
 
 
+def parse_publish_year(value: Any) -> int | None:
+    if value is None:
+        return None
+    text = compact_text(value)
+    if not text:
+        return None
+
+    text = text.replace("–", "-").replace("—", "-")
+    match = re.search(r"\b(?:18|19|20|21)\d{2}\b", text)
+    if match:
+        year = int(match.group(0))
+        if 1800 <= year <= datetime.now().year:
+            return year
+
+    match = re.search(r"\b(?:\d{1,2}[./-]){1,2}((?:18|19|20|21)\d{2})\b", text)
+    if match:
+        year = int(match.group(1))
+        if 1800 <= year <= datetime.now().year:
+            return year
+
+    return None
+
+
 def normalized_text(value: Any) -> str | None:
     text = compact_text(value)
     return text.casefold() if text else None
@@ -91,6 +120,50 @@ def item_url(item: dict[str, Any]) -> str | None:
     if not value:
         return None
     return urljoin("https://tiki.vn/", str(value))
+
+
+def is_combo_or_series_item(item: dict[str, Any]) -> bool:
+    title = compact_text(item.get("name")) or ""
+    path = str(item.get("url_path") or item.get("url_key") or "").lower()
+    title_lower = title.casefold()
+
+    # URL Tiki thường có combo trong slug
+    path_keywords = [
+        "combo",
+        "bo-sach",
+        "tron-bo",
+        "set-sach",
+        "boxset",
+        "series",
+    ]
+
+    if any(keyword in path for keyword in path_keywords):
+        return True
+
+    # Title có thể là:
+    # "COMBO 3 Sách..."
+    # "Sách - Combo 2 cuốn..."
+    # "Sách PANDABOOKS combo 2 cuốn..."
+    title_keywords = [
+        "combo",
+        "boxset",
+        "set sách",
+        "trọn bộ",
+        "bộ sách",
+        "bộ truyện",
+    ]
+
+    if any(keyword in title_lower for keyword in title_keywords):
+        return True
+
+    # Bắt các dạng "bộ 2 cuốn", "bộ 10 cuốn", "3 cuốn", "combo 3 sách"
+    combo_patterns = [
+        r"\bcombo\s*\d+\s*(cuốn|sách|quyển)\b",
+        r"\bbộ\s*\d+\s*(cuốn|sách|quyển)\b",
+        r"\b\d+\s*(cuốn|sách|quyển)\b",
+    ]
+
+    return any(re.search(pattern, title_lower) for pattern in combo_patterns)
 
 
 def sold_count(item: dict[str, Any]) -> int:
@@ -211,6 +284,28 @@ def tiki_json_ld_metadata(response) -> dict[str, str]:
 
     return metadata
 
+def tiki_detail_metadata_from_html(response) -> dict[str, str]:
+    metadata: dict[str, str] = {}
+
+    # Tiki detail rows thường gồm 2 span: label + value
+    for row in response.css("div"):
+        texts = [
+            compact_text(text)
+            for text in row.css("span::text").getall()
+        ]
+        texts = [text for text in texts if text]
+
+        if len(texts) < 2:
+            continue
+
+        label = fold_text(texts[0]).rstrip(":")
+        value = texts[-1]
+
+        if label and value:
+            metadata[label] = value
+
+    return metadata
+
 class TikiSpider(scrapy.Spider):
     name = "tiki"
     allowed_domains = ["tiki.vn"]
@@ -292,6 +387,9 @@ class TikiSpider(scrapy.Spider):
             if not isinstance(raw_item, dict):
                 continue
 
+            if is_combo_or_series_item(raw_item):
+                continue
+
             book_id = raw_item.get("id") or raw_item.get("sku")
             url = item_url(raw_item)
             dedupe_key = f"tiki:{book_id or url}"
@@ -299,6 +397,14 @@ class TikiSpider(scrapy.Spider):
                 continue
             self.seen_keys.add(dedupe_key)
             self.items_yielded += 1
+
+            publish_year = parse_publish_year(
+                raw_item.get("publication_date")
+                or raw_item.get("publicationDate")
+                or raw_item.get("published_date")
+                or raw_item.get("datePublished")
+                or raw_item.get("publication_date_string")
+            )
 
             item = BookItem(
                 book_id=book_id,
@@ -315,7 +421,7 @@ class TikiSpider(scrapy.Spider):
                 rating=raw_item.get("rating_average"),
                 review_count=raw_item.get("review_count"),
                 sold_count=sold_count(raw_item),
-                publish_year=None,
+                publish_year=publish_year,
                 page_count=None,
                 url=url,
             )
@@ -379,10 +485,27 @@ class TikiSpider(scrapy.Spider):
 
     def parse_detail_html(self, response, item: BookItem):
         metadata = tiki_json_ld_metadata(response)
+        html_metadata = tiki_detail_metadata_from_html(response)
 
-        publisher = metadata.get("nhà xuất bản")
-        page_count = metadata.get("số trang")
-        publish_year = metadata.get("năm xuất bản") or metadata.get("năm xb")
+        metadata.update({key: value for key, value in html_metadata.items() if key not in metadata})
+        detail_title = compact_text(
+            response.css("h1::text").get()
+            or response.css("meta[property='og:title']::attr(content)").get()
+        )
+
+        if detail_title:
+            item["title"] = detail_title
+
+        publisher = metadata.get("nha xuat ban") or metadata.get("nhà xuất bản")
+        page_count = metadata.get("so trang") or metadata.get("số trang")
+        publish_year = (
+            metadata.get("ngay xuat ban")
+            or metadata.get("ngày xuất bản")
+            or metadata.get("nam xuat ban")
+            or metadata.get("năm xuất bản")
+            or metadata.get("nam xb")
+            or metadata.get("năm xb")
+        )
 
         product = tiki_json_ld_product(response)
         if not publisher:
