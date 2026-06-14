@@ -63,7 +63,7 @@ CATEGORY_MAPPING = {
     "other languages": "Sách học ngoại ngữ",
     
     #Từ điển
-    "dictionaries languages": "Từ điển",
+    "dictionaries languages": "Từ điển & Ngôn ngữ",
     "dictionary": "Từ điển",
     
     # Kinh tế
