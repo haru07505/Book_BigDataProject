@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+from itertools import product
 import json
 import re
 import sys
 from pathlib import Path
 from typing import Any
+from urllib import response
+from urllib import response
 from urllib.parse import parse_qsl, unquote, urlencode, urljoin, urlsplit, urlunsplit
 
 import scrapy
@@ -15,6 +18,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from crawler_etl.scrapy_crawler.book_crawler.items import BookItem
+
 from crawler_etl.scrapy_crawler.book_crawler.text_utils import (
     canonical_url,
     clean_title,
@@ -101,14 +105,6 @@ def json_ld_product(response) -> dict[str, Any]:
 
 def metadata_rows(response) -> dict[str, str]:
     metadata: dict[str, str] = {}
-    for row in response.css("tr, .product-view-sa-supplier, .product-view-sa-author"):
-        values = [
-            text
-            for text in (compact_text(value) for value in row.xpath(".//text()").getall())
-            if text
-        ]
-        if len(values) >= 2:
-            metadata[fold_text(values[0]).rstrip(":")] = values[-1]
 
     known_labels = {
         "ma hang",
@@ -127,11 +123,43 @@ def metadata_rows(response) -> dict[str, str]:
         "number of pages",
         "hinh thuc",
     }
+
+    invalid_metadata_values = known_labels | {
+        "trong luong gr",
+        "kich thuoc bao bi",
+        "ngon ngu",
+        "san pham ban chay nhat",
+        "du kien co hang",
+    }
+
+    for row in response.css("tr, .product-view-sa-supplier, .product-view-sa-author"):
+        values = [
+            text
+            for text in (compact_text(value) for value in row.xpath(".//text()").getall())
+            if text
+        ]
+
+        if len(values) >= 2:
+            key = fold_text(values[0]).rstrip(":")
+            value = values[-1].strip()
+            value_key = fold_text(value).rstrip(":")
+
+            if key in known_labels and value_key not in invalid_metadata_values:
+                metadata[key] = value
+
     lines = response_lines(response)
     folded_lines = [fold_text(line).rstrip(":") for line in lines]
+
     for index, key in enumerate(folded_lines[:-1]):
         if key in known_labels and key not in metadata:
-            metadata[key] = lines[index + 1]
+            value = lines[index + 1].strip()
+            value_key = fold_text(value).rstrip(":")
+
+            if value_key in invalid_metadata_values:
+                continue
+
+            metadata[key] = value
+
     return metadata
 
 
@@ -200,6 +228,28 @@ def discount_from_response(response) -> float | None:
             return abs(discount)
 
     return None
+
+
+def is_boxset_item(title: str | None, sku: str | None, url: str | None, product: dict[str, Any]) -> bool:
+    """Detect boxset / box set / trọn bộ items and exclude them from crawl output."""
+    txt = "" if title is None else title.casefold()
+    prod_name = "" if not isinstance(product, dict) else str(product.get("name") or "").casefold()
+    path = urlsplit(str(url or "")).path.lower()
+
+    # Keywords that indicate a box set
+    box_keys = ("boxset", "box set", "box-set", "trọn bộ", "tron bo", "tron-bo", "trọn-bộ")
+    for k in box_keys:
+        if k in txt or k in prod_name or k in path:
+            return True
+
+    # Some SKUs are long numeric EANs for boxsets; if SKU is long and name suggests a set, treat as boxset
+    if sku and isinstance(sku, (str, int)):
+        s = str(sku)
+        if s.isdigit() and len(s) >= 13:
+            if any(w in txt for w in ("set", "box", "trọn", "trọn bộ")) or any(w in prod_name for w in ("set", "box", "trọn", "trọn bộ")):
+                return True
+
+    return False
 
 
 def rating_from_response(response) -> float | None:
@@ -299,6 +349,48 @@ def language_group_from_url(url: str, fallback: str | None = None) -> str | None
 def matches_category_prefix(url: str, prefixes: list[str]) -> bool:
     return any(url.startswith(prefix.rstrip("/") + "/") for prefix in prefixes)
 
+def title_from_response(response, product: dict[str, Any]) -> str | None:
+    candidates = [
+        response.css("h1.fhs_name_product_desktop::text").get(),
+        response.css(".fhs_name_product_desktop::text").get(),
+        response.css(".product-essential-detail h1::text").get(),
+        response.css(".product-name h1::text").get(),
+        response.css("h1::text").get(),
+        response.css("meta[property='og:title']::attr(content)").get(),
+        response.css("meta[name='title']::attr(content)").get(),
+        product.get("name"),
+        response.css("title::text").get(),
+    ]
+
+    for value in candidates:
+        title = clean_title(value)
+        if title and is_good_title(title):
+            return title
+
+    for value in candidates:
+        title = clean_title(value)
+        if title:
+            return title
+
+    return None
+
+
+def is_good_title(title: str) -> bool:
+    text = title.strip()
+
+    if "�" in text:
+        return False
+
+    if text.endswith(("(", "-", ",", ";", ":")):
+        return False
+
+    if text.count("(") > text.count(")"):
+        return False
+
+    if len(text) < 5:
+        return False
+
+    return True
 
 class FahasaSpider(scrapy.Spider):
     name = "fahasa"
@@ -424,7 +516,22 @@ class FahasaSpider(scrapy.Spider):
                     return
 
                 detail_url = canonical_url(urljoin(response.url, href))
+
                 if not detail_url.endswith(".html"):
+                    continue
+
+                if "seriesbook-index" in detail_url or "/series-" in urlsplit(detail_url).path.lower():
+                    continue
+
+                path = urlsplit(detail_url).path.lower()
+
+                if (
+                    "seriesbook-index" in path
+                    or path.startswith("/series-")
+                    or "combo" in path
+                    or "bo-sach" in path
+                    or "bộ-sách" in path
+                ):
                     continue
 
                 if detail_url in self.seen_urls:
@@ -454,10 +561,43 @@ class FahasaSpider(scrapy.Spider):
             rating_value = parse_decimal(aggregate_rating.get("ratingValue"))
             review_count = parse_human_count(aggregate_rating.get("reviewCount"))
 
+        detail_title = title_from_response(response, product)
+
+        # Compute prices safely.
+        # If Fahasa does not show an original/old price, treat it as no discount.
+        price_val = first_not_none(offer_price(product), price_from_response(response))
+        orig_price_val = original_price_from_response(response)
+
+        if orig_price_val is None and price_val is not None:
+            orig_price_val = price_val
+            discount_val = 0.0
+        else:
+            discount_val = discount_from_response(response)
+
+        if (
+            discount_val is None
+            and price_val is not None
+            and orig_price_val is not None
+            and orig_price_val > price_val
+        ):
+            discount_val = round((orig_price_val - price_val) * 100 / orig_price_val, 2)
+
+        if (
+            discount_val is not None
+            and discount_val > 100
+            and price_val is not None
+            and orig_price_val is not None
+        ):
+            discount_val = round((orig_price_val - price_val) * 100 / orig_price_val, 2)
+
+        # drop boxset items
+        if is_boxset_item(detail_title, sku, detail_url, product):
+            return
+
         yield BookItem(
             book_id=sku or fallback_id,
             source="fahasa",
-            title=clean_title(product.get("name") or response.css("title::text").get()),
+            title=detail_title,
             author=find_metadata(metadata, "tac gia", "author"),
             publisher=find_metadata(metadata, "nha xuat ban", "nxb", "publisher"),
             language_group=category.get("language_group"),
@@ -467,9 +607,9 @@ class FahasaSpider(scrapy.Spider):
                 or find_metadata(metadata, "nhom san pham", "category")
                 or config_sub_category(category)
             ),
-            price=first_not_none(offer_price(product), price_from_response(response)),
-            original_price=original_price_from_response(response),
-            discount_rate=discount_from_response(response),
+            price=price_val,
+            original_price=orig_price_val,
+            discount_rate=discount_val,
             rating=first_not_none(rating_value, rating_from_response(response)),
             review_count=first_not_none(review_count, review_count_from_response(response)),
             sold_count=first_not_none(sold_count_from_response(response), 0),

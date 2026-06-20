@@ -21,13 +21,11 @@
             <tr>
               {% for column in columns %}
                 <td>
-                  {# 1. Cột STATUS #}
                   {% if column == "status" %}
                     <span class="badge {% if row.get(column) == 'OK' %}text-bg-success{% else %}text-bg-warning{% endif %}">
                       {{ row.get(column, "") }}
                     </span>
 
-                  {# 2. Cột DATASETS (Thống kê số lượng dòng) #}
                   {% elif column == "DATASETS" %}
                     {% set datasets = row.get(column, {}) %}
                     <div class="lh-sm">
@@ -36,7 +34,6 @@
                       <small class="text-muted d-block mt-1">Spark:</small> <strong>{{ datasets.get('books_spark', 0) }}</strong> dòng
                     </div>
 
-                  {# 3. Cột QUALITY_CHECKS (Kiểm tra dữ liệu hợp lệ và lỗi thiếu trường) #}
                   {% elif column == "QUALITY_CHECKS" %}
                     {% set qc = row.get(column, {}) %}
                     <div class="lh-sm">
@@ -53,7 +50,6 @@
                       {% endif %}
                     </div>
 
-                  {# 4. Cột RECONCILIATION (Đối soát chênh lệch chéo giữa các tầng) #}
                   {% elif column == "RECONCILIATION" %}
                     {% set rec = row.get(column, {}) %}
                     <div class="lh-sm" style="font-size: 0.85rem;">
@@ -68,7 +64,6 @@
                       </strong>
                     </div>
 
-                  {# 5. Cột MISSING_RECORDS (Liệt kê ID bị mất tích) #}
                   {% elif column == "MISSING_RECORDS" %}
                     {% set missing_rec = row.get(column, {}) %}
                     <div class="lh-sm" style="font-size: 0.85rem;">
@@ -78,7 +73,6 @@
                       {% if missing_rec.get('spark') %}<span class="badge text-bg-danger">{{ missing_rec.get('spark')|length }} ID</span>{% else %}<span class="text-success">✔ Không</span>{% endif %}
                     </div>
 
-                  {# 6. Các cột văn bản thông thường khác #}
                   {% else %}
                     {{ row.get(column, "") }}
                   {% endif %}

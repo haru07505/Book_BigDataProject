@@ -9,6 +9,28 @@ from typing import Any
 
 from normalize import FIELDS
 
+def is_non_book_product(record: dict[str, Any]) -> bool:
+    book_id = str(record.get("book_id") or "")
+
+    return book_id in {
+        "209389165",  # Bookmark
+        "279296184",  # Lịch World Cup
+        "279389953",  # Lịch World Cup
+        "271198542",  # Thẻ VIP báo
+        "2990436010637",  # Hệ Thống Tài Khoản
+        "9786047957743",  # Hệ Thống Tài Khoản
+        "9786043091199",
+        "9786043092912",
+        "9786049189524",
+        "9786043092905",
+        "9786049471315",
+        "8936036316483",
+        "8931805024118",
+        "8931805024088",
+        "8936036317572",
+        "8931805024095",
+        "8936214275151",
+    }
 
 def validate_record(record: dict[str, Any]) -> list[str]:
     errors: list[str] = []
@@ -25,6 +47,9 @@ def validate_record(record: dict[str, Any]) -> list[str]:
 
     if not record.get("title"):
         errors.append("title is required")
+        
+    if is_non_book_product(record):
+        errors.append("non-book product")
 
     if not record.get("url"):
         errors.append("url is required")
